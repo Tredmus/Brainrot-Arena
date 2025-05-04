@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Package, X, AlertCircle, FastForward, Timer, Sparkles, CreditCard, Swords, Trophy, Skull, Heart, Shield, Brain, Zap, Play, Battery } from 'lucide-react';
 import Layout from '../components/Layout';
@@ -8,18 +8,78 @@ import { BattleCharacter, BattleLog, BattleState } from '../types';
 import { calculateDamage, createBattleLog, initializeBattleCharacter, determineNextTurn, checkBattleEnd, applySkillEffect } from '../utils/battleUtils';
 import { canUseSkill, getCharacterSkill } from '../utils/skillUtils';
 
+const rarityColors = {
+  common: {
+    border: 'ring-gray-400',
+    text: 'text-gray-400',
+    bg: 'bg-gray-400/10'
+  },
+  rare: {
+    border: 'ring-blue-400',
+    text: 'text-blue-400',
+    bg: 'bg-blue-400/10'
+  },
+  epic: {
+    border: 'ring-purple-400',
+    text: 'text-purple-400',
+    bg: 'bg-purple-400/10'
+  },
+  legendary: {
+    border: 'ring-yellow-400',
+    text: 'text-yellow-400',
+    bg: 'bg-yellow-400/10'
+  },
+  mythic: {
+    border: 'ring-red-400',
+    text: 'text-red-400',
+    bg: 'bg-red-400/10'
+  }
+};
+
 function CharacterBattleCard({ character, isCurrentTurn }: { 
   character: BattleCharacter; 
   isCurrentTurn: boolean;
 }) {
   const skill = character.skill;
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const rarityStyle = rarityColors[character.rarity];
+
+  useEffect(() => {
+    if (isCurrentTurn && character.sound_effect && audioRef.current) {
+      audioRef.current.volume = 0.5;
+      audioRef.current.play();
+    }
+  }, [isCurrentTurn, character.sound_effect]);
+
+  useEffect(() => {
+    if (isCurrentTurn && cardRef.current) {
+      cardRef.current.classList.add('animate-shake');
+      setTimeout(() => {
+        if (cardRef.current) {
+          cardRef.current.classList.remove('animate-shake');
+        }
+      }, 500);
+    }
+  }, [isCurrentTurn]);
 
   return (
-    <div className={`
-      relative bg-gray-900 rounded-lg overflow-hidden transition-all
-      ${character.isDefeated ? 'opacity-50' : ''}
-      ${isCurrentTurn ? 'ring-2 ring-purple-500 animate-pulse' : ''}
-    `}>
+    <div
+      ref={cardRef}
+      className={`
+        relative bg-gray-900 rounded-lg overflow-hidden transition-all
+        ${character.isDefeated ? 'opacity-50' : ''}
+        ${isCurrentTurn ? `ring-2 ${rarityStyle.border} animate-pulse` : ''}
+      `}
+    >
+      {character.sound_effect && (
+        <audio
+          ref={audioRef}
+          src={character.sound_effect}
+          preload="auto"
+        />
+      )}
+
       {/* Header */}
       <div className="bg-gradient-to-r from-gray-800 to-gray-900 p-2 flex items-center justify-between">
         <h3 className="font-bold truncate text-sm">{character.name}</h3>
@@ -82,17 +142,17 @@ function CharacterBattleCard({ character, isCurrentTurn }: {
 
         {/* Skill */}
         {skill && (
-          <div className="bg-gray-800 rounded p-1.5">
+          <div className={`${rarityStyle.bg} rounded p-1.5`}>
             <div className="flex items-center gap-1 mb-0.5">
-              <Zap className="w-3 h-3 text-purple-400" />
-              <span className="text-xs font-bold text-purple-400 truncate">{skill.name}</span>
+              <Zap className={`w-3 h-3 ${rarityStyle.text}`} />
+              <span className={`text-xs font-bold ${rarityStyle.text} truncate`}>{skill.name}</span>
               {skill.currentCooldown > 0 && (
                 <span className="ml-auto text-[10px] bg-gray-700 px-1 py-0.5 rounded">
                   CD: {skill.currentCooldown}
                 </span>
               )}
             </div>
-            <p className="text-[10px] text-gray-400 line-clamp-2">{skill.description}</p>
+            <p className={`text-[10px] ${rarityStyle.text} line-clamp-2`}>{skill.description}</p>
           </div>
         )}
       </div>

@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Package, X, AlertCircle, FastForward, Timer, Sparkles, CreditCard } from 'lucide-react';
+import { ArrowLeft, Package, X, AlertCircle, FastForward, Timer, Sparkles, CreditCard, Swords, Trophy, Skull, Heart, Shield, Brain, Zap, Play, Battery } from 'lucide-react';
 import Layout from '../components/Layout';
+import PaymentModal from '../components/PaymentModal';
 import { supabase } from '../lib/supabase';
 import { useUser } from '../hooks/useUser';
 
 interface Prize {
   id: string;
   name: string;
-  type: 'character' | 'item' | 'brains';
+  type: 'character';
   rarity: 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
   image: string;
   description: string;
-  value: number;
 }
 
 const chestConfigs = {
@@ -21,9 +21,9 @@ const chestConfigs = {
     minPrizes: 1,
     maxPrizes: 1,
     prizes: [
-      { type: 'brains', weight: 15, min: 5, max: 15 },
-      { type: 'character', weight: 70, rarities: ['common'] },
-      { type: 'item', weight: 15, rarities: ['common'] }
+      { type: 'character', weight: 65, rarities: ['common'] },
+      { type: 'character', weight: 25, rarities: ['rare'] },
+      { type: 'character', weight: 10, rarities: ['epic'] }
     ]
   },
   silver: {
@@ -31,9 +31,10 @@ const chestConfigs = {
     minPrizes: 1,
     maxPrizes: 2,
     prizes: [
-      { type: 'brains', weight: 20, min: 10, max: 30 },
-      { type: 'character', weight: 60, rarities: ['common', 'rare'] },
-      { type: 'item', weight: 20, rarities: ['common', 'rare'] }
+      { type: 'character', weight: 48, rarities: ['common'] },
+      { type: 'character', weight: 35, rarities: ['rare'] },
+      { type: 'character', weight: 15, rarities: ['epic'] },
+      { type: 'character', weight: 2, rarities: ['legendary'] }
     ]
   },
   gold: {
@@ -41,9 +42,11 @@ const chestConfigs = {
     minPrizes: 2,
     maxPrizes: 3,
     prizes: [
-      { type: 'brains', weight: 25, min: 25, max: 75 },
-      { type: 'character', weight: 55, rarities: ['rare', 'epic'] },
-      { type: 'item', weight: 20, rarities: ['rare', 'epic'] }
+      { type: 'character', weight: 20, rarities: ['common'] },
+      { type: 'character', weight: 34, rarities: ['rare'] },
+      { type: 'character', weight: 35, rarities: ['epic'] },
+      { type: 'character', weight: 10, rarities: ['legendary'] },
+      { type: 'character', weight: 1, rarities: ['mythic'] }
     ]
   },
   ruby: {
@@ -51,9 +54,10 @@ const chestConfigs = {
     minPrizes: 3,
     maxPrizes: 4,
     prizes: [
-      { type: 'brains', weight: 30, min: 50, max: 150 },
-      { type: 'character', weight: 50, rarities: ['epic', 'legendary'] },
-      { type: 'item', weight: 20, rarities: ['epic', 'legendary'] }
+      { type: 'character', weight: 25, rarities: ['rare'] },
+      { type: 'character', weight: 37, rarities: ['epic'] },
+      { type: 'character', weight: 35, rarities: ['legendary'] },
+      { type: 'character', weight: 3, rarities: ['mythic'] }
     ]
   },
   diamond: {
@@ -61,9 +65,10 @@ const chestConfigs = {
     minPrizes: 4,
     maxPrizes: 7,
     prizes: [
-      { type: 'brains', weight: 35, min: 100, max: 300 },
-      { type: 'character', weight: 45, rarities: ['legendary', 'mythic'] },
-      { type: 'item', weight: 20, rarities: ['legendary', 'mythic'] }
+      { type: 'character', weight: 15, rarities: ['rare'] },
+      { type: 'character', weight: 35, rarities: ['epic'] },
+      { type: 'character', weight: 45, rarities: ['legendary'] },
+      { type: 'character', weight: 5, rarities: ['mythic'] }
     ]
   },
   tralalero: {
@@ -92,17 +97,16 @@ const PrizeCard = ({ prize, isSelected, isSpinning }: {
   <div 
     className={`
       relative aspect-square border-2 rounded-lg overflow-hidden transition-all duration-200
-      ${rarityColors[prize.rarity]}
+      ${isSelected && !isSpinning ? rarityColors[prize.rarity] : 'border-purple-500/50'}
       ${isSelected ? 'scale-105 ring-4 ring-white/50' : ''}
-      ${isSpinning ? 'opacity-50' : ''}
     `}
   >
     <img 
-      src={isSelected ? prize.image : "https://snipboard.io/DXfAEd.jpg"}
-      alt={isSelected ? prize.name : "Hidden Prize"}
+      src={isSelected && !isSpinning ? prize.image : "https://snipboard.io/DXfAEd.jpg"}
+      alt={isSelected && !isSpinning ? prize.name : "Hidden Prize"}
       className="w-full h-full object-cover"
     />
-    {isSelected && (
+    {isSelected && !isSpinning && (
       <div className="absolute bottom-0 left-0 right-0 bg-black/50 p-2">
         <div className="text-xs font-semibold truncate">{prize.name}</div>
         <div className="text-xs text-gray-300 truncate">{prize.description}</div>
@@ -240,50 +244,32 @@ export default function OpenChest() {
                 type: 'character',
                 rarity: char.rarity,
                 image: char.image,
-                description: char.description || `${char.rarity} Character`,
-                value: 0
+                description: char.description || `${char.rarity} Character`
               });
             });
           }
         }
 
-        const itemPrize = chestConfig.prizes.find(p => p.type === 'item');
-        if (itemPrize) {
-          const { data: items } = await supabase
-            .from('items')
+        // Special handling for Tralalero chest
+        if (type === 'tralalero') {
+          const { data: tralalero, error: tralaleroError } = await supabase
+            .from('characters')
             .select('*')
-            .in('rarity', itemPrize.rarities);
+            .eq('name', 'Tralalero Tralala')
+            .single();
 
-          if (items) {
-            items.forEach(item => {
-              availablePrizes.push({
-                id: item.id,
-                name: item.name,
-                type: 'item',
-                rarity: item.rarity,
-                image: item.icon,
-                description: item.description || `${item.rarity} Item`,
-                value: 0
-              });
-            });
-          }
-        }
+          if (tralaleroError) throw tralaleroError;
 
-        const brainPrize = chestConfig.prizes.find(p => p.type === 'brains');
-        if (brainPrize) {
-          const amount = Math.floor(
-            Math.random() * (brainPrize.max - brainPrize.min + 1) + 
-            brainPrize.min
-          );
-          availablePrizes.push({
-            id: 'brains',
-            name: `${amount} Rotten Brains`,
-            type: 'brains',
-            rarity: 'common',
-            image: 'https://images.unsplash.com/photo-1578252389465-6acb8a88fe9b?auto=format&fit=crop&q=80&w=300&h=300',
-            description: `${amount} rotten brains`,
-            value: amount
-          });
+          setPrizes([{
+            id: tralalero.id,
+            name: tralalero.name,
+            type: 'character',
+            rarity: tralalero.rarity,
+            image: tralalero.image,
+            description: tralalero.description
+          }]);
+          setRemainingPrizes(0);
+          return;
         }
 
         // Determine number of prizes based on chest config
@@ -326,14 +312,7 @@ export default function OpenChest() {
     if (!user) return;
 
     try {
-      if (prize.type === 'brains') {
-        const { error } = await supabase
-          .from('users')
-          .update({ rotten_brains: user.rotten_brains + prize.value })
-          .eq('id', user.id);
-
-        if (error) throw error;
-      } else if (prize.type === 'character') {
+      if (prize.type === 'character') {
         const { data: existingCharacter, error: queryError } = await supabase
           .from('user_characters')
           .select('id, level, experience')
@@ -365,16 +344,6 @@ export default function OpenChest() {
 
           if (error) throw error;
         }
-      } else if (prize.type === 'item') {
-        const { error } = await supabase
-          .from('user_items')
-          .insert({
-            user_id: user.id,
-            item_id: prize.id,
-            is_equipped: false
-          });
-
-        if (error) throw error;
       }
 
       setCollectedPrizes(prev => [...prev, prize]);
