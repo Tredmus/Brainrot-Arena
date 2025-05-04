@@ -49,28 +49,18 @@ export default function Layout({ children }: LayoutProps) {
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => navigate('/store')}
-                  className="group relative px-6 py-2 rounded-lg overflow-hidden transition-all hover:scale-105"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors text-gray-300 hover:text-white"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-600 to-pink-600 opacity-75 group-hover:opacity-100 transition-opacity" />
-                  <div className="absolute inset-0 bg-gray-900/50" />
-                  <div className="relative flex items-center gap-2 text-white">
-                    <Package className="w-5 h-5" />
-                    <span className="font-medium">Store</span>
-                  </div>
-                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-400 to-pink-400 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
+                  <Package className="w-5 h-5" />
+                  <span>Store</span>
                 </button>
 
                 <button
                   onClick={() => navigate('/arena')}
-                  className="group relative px-6 py-2 rounded-lg overflow-hidden transition-all hover:scale-105"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors text-gray-300 hover:text-white"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-red-600 to-orange-600 opacity-75 group-hover:opacity-100 transition-opacity" />
-                  <div className="absolute inset-0 bg-gray-900/50" />
-                  <div className="relative flex items-center gap-2 text-white">
-                    <Swords className="w-5 h-5" />
-                    <span className="font-medium">Arena</span>
-                  </div>
-                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-red-400 to-orange-400 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
+                  <Swords className="w-5 h-5" />
+                  <span>Arena</span>
                 </button>
               </div>
             </div>
@@ -86,13 +76,13 @@ export default function Layout({ children }: LayoutProps) {
               />
               <button
                 onClick={() => navigate('/profile')}
-                className="p-2 rounded-full hover:bg-gray-700 transition-all hover:scale-110"
+                className="p-2 rounded-full hover:bg-gray-700"
               >
                 <User className="h-5 w-5" />
               </button>
               <button
                 onClick={handleLogout}
-                className="p-2 rounded-full hover:bg-gray-700 transition-all hover:scale-110"
+                className="p-2 rounded-full hover:bg-gray-700"
               >
                 <LogOut className="h-5 w-5" />
               </button>

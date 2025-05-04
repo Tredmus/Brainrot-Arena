@@ -85,6 +85,7 @@ export default function CharacterCard({
   const [isInTeam, setIsInTeam] = useState(false);
   const [teamPosition, setTeamPosition] = useState<number | null>(null);
   const [teamCharacters, setTeamCharacters] = useState<Character[]>([]);
+  const [hasInteracted, setHasInteracted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isPlayingRef = useRef(false);
 
@@ -150,7 +151,7 @@ export default function CharacterCard({
   }, [character.id]);
 
   const handleMouseEnter = () => {
-    if (!soundEnabled || !character.sound_effect || !audioRef.current || isPlayingRef.current) return;
+    if (!soundEnabled || !character.sound_effect || !audioRef.current || isPlayingRef.current || !hasInteracted) return;
 
     try {
       audioRef.current.volume = volume;
@@ -190,16 +191,19 @@ export default function CharacterCard({
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
+    setHasInteracted(true);
     onClick?.();
   };
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    setHasInteracted(true);
     onToggleFavorite?.(character.id);
   };
 
   const handleTeamClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    setHasInteracted(true);
     setIsLoading(true);
 
     try {

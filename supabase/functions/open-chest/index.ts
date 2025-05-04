@@ -46,18 +46,19 @@ const chestConfigs: Record<string, ChestConfig> = {
     maxPrizes: 4,
     prizes: [
       { type: 'character', weight: 25, rarities: ['rare'] },
-      { type: 'character', weight: 55, rarities: ['epic'] },
-      { type: 'character', weight: 15, rarities: ['legendary'] },
-      { type: 'character', weight: 5, rarities: ['mythic'] }
+      { type: 'character', weight: 37, rarities: ['epic'] },
+      { type: 'character', weight: 35, rarities: ['legendary'] },
+      { type: 'character', weight: 3, rarities: ['mythic'] }
     ]
   },
   diamond: {
     minPrizes: 4,
     maxPrizes: 7,
     prizes: [
-      { type: 'character', weight: 60, rarities: ['epic'] },
-      { type: 'character', weight: 30, rarities: ['legendary'] },
-      { type: 'character', weight: 10, rarities: ['mythic'] }
+      { type: 'character', weight: 15, rarities: ['rare'] },
+      { type: 'character', weight: 35, rarities: ['epic'] },
+      { type: 'character', weight: 45, rarities: ['legendary'] },
+      { type: 'character', weight: 5, rarities: ['mythic'] }
     ]
   },
   tralalero: {
@@ -129,15 +130,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get all available characters
-    const { data: allCharacters, error: charError } = await supabaseClient
-      .from('characters')
-      .select('*')
-      .neq('name', 'Tralalero Tralala');
+    // Normal chest handling
+    const config = chestConfigs[chestType];
+    const numPrizes = config.minPrizes + Math.floor(Math.random() * (config.maxPrizes - config.minPrizes + 1));
+    const rewards = [];
 
-    if (charError) throw charError;
-
-    // Get user's owned characters
+    // Get all available characters that the user doesn't have
     const { data: userCharacters } = await supabaseClient
       .from('user_characters')
       .select('character_id')
@@ -145,13 +143,9 @@ Deno.serve(async (req) => {
 
     const ownedCharacterIds = userCharacters?.map(uc => uc.character_id) || [];
 
-    const config = chestConfigs[chestType];
-    const numPrizes = config.minPrizes + Math.floor(Math.random() * (config.maxPrizes - config.minPrizes + 1));
-    const rewards = [];
-
-    // For each prize draw
+    // For each prize slot
     for (let i = 0; i < numPrizes; i++) {
-      // Select rarity based on weights
+      // Select prize type based on weights
       const totalWeight = config.prizes.reduce((sum, p) => sum + p.weight, 0);
       let random = Math.random() * totalWeight;
       let selectedPrize;
@@ -166,14 +160,15 @@ Deno.serve(async (req) => {
 
       if (!selectedPrize) continue;
 
-      // Get available characters for the selected rarity
-      const availableCharacters = allCharacters?.filter(char => 
-        selectedPrize.rarities.includes(char.rarity) && 
-        !ownedCharacterIds.includes(char.id)
-      );
+      // Get available characters for the selected rarities
+      const { data: availableCharacters, error: charError } = await supabaseClient
+        .from('characters')
+        .select('*')
+        .in('rarity', selectedPrize.rarities)
+        .not('id', 'in', ownedCharacterIds)
+        .neq('name', 'Tralalero Tralala');
 
-      if (availableCharacters && availableCharacters.length > 0) {
-        // Select random character from available ones
+      if (!charError && availableCharacters && availableCharacters.length > 0) {
         const character = availableCharacters[Math.floor(Math.random() * availableCharacters.length)];
         rewards.push({
           type: 'character',

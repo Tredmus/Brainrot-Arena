@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, Swords, Search, Trophy, Users, AlertCircle, Brain, Coins, CreditCard, Loader2, Zap, Info } from 'lucide-react';
+import { Package, Swords, Search, Trophy, Users, AlertCircle, Brain, Coins, CreditCard, Loader2, Zap } from 'lucide-react';
 import Layout from '../components/Layout';
 import PaymentModal from '../components/PaymentModal';
 import { supabase } from '../lib/supabase';
@@ -19,6 +19,10 @@ interface ChestType {
     chances: number[];
     rarities: ('common' | 'rare' | 'epic' | 'legendary' | 'mythic')[];
   };
+  brainBonus: {
+    min: number;
+    max: number;
+  };
 }
 
 const chests: ChestType[] = [
@@ -34,6 +38,10 @@ const chests: ChestType[] = [
       max: 1,
       chances: [65, 25, 10],
       rarities: ['common', 'rare', 'epic']
+    },
+    brainBonus: {
+      min: 5,
+      max: 10
     }
   },
   {
@@ -48,6 +56,10 @@ const chests: ChestType[] = [
       max: 2,
       chances: [48, 35, 15, 2],
       rarities: ['common', 'rare', 'epic', 'legendary']
+    },
+    brainBonus: {
+      min: 10,
+      max: 20
     }
   },
   {
@@ -62,6 +74,10 @@ const chests: ChestType[] = [
       max: 3,
       chances: [20, 34, 35, 10, 1],
       rarities: ['common', 'rare', 'epic', 'legendary', 'mythic']
+    },
+    brainBonus: {
+      min: 25,
+      max: 40
     }
   },
   {
@@ -74,8 +90,12 @@ const chests: ChestType[] = [
     rewards: {
       min: 3,
       max: 4,
-      chances: [25, 55, 15, 5],
+      chances: [0, 25, 37, 35, 3],
       rarities: ['rare', 'epic', 'legendary', 'mythic']
+    },
+    brainBonus: {
+      min: 50,
+      max: 75
     }
   },
   {
@@ -88,8 +108,12 @@ const chests: ChestType[] = [
     rewards: {
       min: 4,
       max: 7,
-      chances: [60, 30, 10],
-      rarities: ['epic', 'legendary', 'mythic']
+      chances: [0, 15, 35, 45, 5],
+      rarities: ['rare', 'epic', 'legendary', 'mythic']
+    },
+    brainBonus: {
+      min: 100,
+      max: 150
     }
   }
 ];
@@ -113,136 +137,42 @@ interface ChestCardProps {
   isProcessing: boolean;
 }
 
-const rarityColors: Record<string, { border: string; bg: string; text: string }> = {
-  common: {
-    border: 'border-gray-400',
-    bg: 'bg-gray-400/10',
-    text: 'text-gray-400'
-  },
-  rare: {
-    border: 'border-blue-400',
-    bg: 'bg-blue-400/10',
-    text: 'text-blue-400'
-  },
-  epic: {
-    border: 'border-purple-400',
-    bg: 'bg-purple-400/10',
-    text: 'text-purple-400'
-  },
-  legendary: {
-    border: 'border-yellow-400',
-    bg: 'bg-yellow-400/10',
-    text: 'text-yellow-400'
-  },
-  mythic: {
-    border: 'border-red-400',
-    bg: 'bg-red-400/10',
-    text: 'text-red-400'
-  },
-  default: {
-    border: 'border-gray-400',
-    bg: 'bg-gray-400/10',
-    text: 'text-gray-400'
-  }
-};
-
 function ChestCard({ chest, onPurchase, isAffordable, isProcessing }: ChestCardProps) {
-  const [showTooltip, setShowTooltip] = useState(false);
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-
-  const handleMouseEnter = (e: React.MouseEvent) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setTooltipPosition({
-      x: rect.left + rect.width / 2,
-      y: rect.bottom + 16 // Position below the chest
-    });
-    setShowTooltip(true);
-  };
-
   const handlePurchase = () => {
     if (!isProcessing && isAffordable) {
       onPurchase();
     }
   };
 
-  const getRarityColors = (rarity: string) => rarityColors[rarity] || rarityColors.default;
+  const rarityColors = {
+    common: 'border-gray-400',
+    rare: 'border-blue-400',
+    epic: 'border-purple-400',
+    legendary: 'border-yellow-400',
+    mythic: 'border-red-400'
+  };
 
   return (
-    <div className="relative">
-      <div 
-        className={`bg-gray-800 rounded-lg overflow-hidden border-2 ${getRarityColors(chest.rarity).border} hover:shadow-lg hover:shadow-purple-500/20 transition-all`}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={() => setShowTooltip(false)}
-      >
-        <div className="relative">
-          <img src={chest.image} alt={chest.name} className="w-full h-32 object-cover" />
-          <div className="absolute top-2 right-2">
-            <Info className={`w-5 h-5 ${getRarityColors(chest.rarity).text}`} />
-          </div>
-        </div>
-        <div className="p-4">
-          <h3 className="font-bold text-lg mb-1">{chest.name}</h3>
-          <p className="text-sm text-gray-400 mb-3">{chest.description}</p>
-          <button
-            onClick={handlePurchase}
-            disabled={!isAffordable || isProcessing}
-            className={`
-              w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg transition-colors
-              ${isAffordable && !isProcessing
-                ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                : 'bg-gray-700 text-gray-400 cursor-not-allowed'
-              }
-            `}
-          >
-            <Coins className="w-4 h-4" />
-            <span>{chest.price}</span>
-          </button>
-        </div>
-      </div>
-
-      {showTooltip && (
-        <div 
-          className="fixed z-50 transform -translate-x-1/2 pointer-events-none"
-          style={{ 
-            left: tooltipPosition.x,
-            top: tooltipPosition.y
-          }}
+    <div className={`bg-gray-800 rounded-lg overflow-hidden border-2 ${rarityColors[chest.rarity]} hover:shadow-lg hover:shadow-purple-500/20 transition-all`}>
+      <img src={chest.image} alt={chest.name} className="w-full h-32 object-cover" />
+      <div className="p-4">
+        <h3 className="font-bold text-lg mb-1">{chest.name}</h3>
+        <p className="text-sm text-gray-400 mb-3">{chest.description}</p>
+        <button
+          onClick={handlePurchase}
+          disabled={!isAffordable || isProcessing}
+          className={`
+            w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg transition-colors
+            ${isAffordable && !isProcessing
+              ? 'bg-purple-600 hover:bg-purple-700 text-white'
+              : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+            }
+          `}
         >
-          <div className="w-0 h-0 border-8 border-transparent border-b-gray-900 mx-auto" />
-          <div className="bg-gray-900 rounded-lg shadow-xl border border-gray-700 p-4 w-72 animate-[fadeIn_0.2s_ease-out]">
-            <div className="space-y-4">
-              {/* Rewards */}
-              <div>
-                <h4 className="font-semibold mb-2 flex items-center gap-2">
-                  <Trophy className="w-4 h-4 text-yellow-400" />
-                  <span>Rewards</span>
-                </h4>
-                <div className="space-y-1 text-sm">
-                  <p className="text-gray-300">
-                    {chest.rewards.min === chest.rewards.max
-                      ? `${chest.rewards.min} Character`
-                      : `${chest.rewards.min}-${chest.rewards.max} Characters`
-                    }
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {chest.rewards.chances.map((chance, index) => (
-                      chance > 0 && (
-                        <div 
-                          key={chest.rewards.rarities[index]}
-                          className={`${getRarityColors(chest.rewards.rarities[index]).bg} rounded px-2 py-1 text-xs flex justify-between`}
-                        >
-                          <span className="capitalize">{chest.rewards.rarities[index]}</span>
-                          <span>{chance}%</span>
-                        </div>
-                      )
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+          <Coins className="w-4 h-4" />
+          <span>{chest.price}</span>
+        </button>
+      </div>
     </div>
   );
 }
